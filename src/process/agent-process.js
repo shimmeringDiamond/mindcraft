@@ -8,7 +8,8 @@ export class AgentProcess {
             args.push('-l', load_memory);
         if (init_message)
             args.push('-m', init_message);
-
+        
+        //starts child process to initiate an ai agent
         const agentProcess = spawn('node', args, {
             stdio: 'inherit',
             stderr: 'inherit',

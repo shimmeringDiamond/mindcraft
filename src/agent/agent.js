@@ -34,7 +34,7 @@ export class Agent {
                 "Set the weather to",
                 "Gamerule "
             ];
-            this.bot.on('chat', (username, message) => {
+            this.bot.on('chat', (username, message) => { //TODO: change in here to accept messages from other bots, perhaps proximity?
                 if (username === this.name) return;
                 
                 if (ignore_messages.some((m) => message.startsWith(m))) return;
@@ -82,6 +82,7 @@ export class Agent {
             let execute_res = await executeCommand(this, message);
             if (user_command_name === '!newAction') {
                 // all user initiated commands are ignored by the bot except for this one
+                // TODO: change this? in order to provide the ai more information about what the bot did
                 // add the preceding message to the history to give context for newAction
                 let truncated_msg = message.substring(0, message.indexOf(user_command_name)).trim();
                 this.history.add(source, truncated_msg);

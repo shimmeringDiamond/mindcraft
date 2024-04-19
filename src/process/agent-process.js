@@ -9,8 +9,8 @@ export class AgentProcess {
         if (init_message)
             args.push('-m', init_message);
 
-        const agentProcess = spawn('node', args, {
-            stdio: 'inherit',
+        this.agentProcess = spawn('node', args, {
+            stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
             stderr: 'inherit',
         });
         
@@ -33,5 +33,9 @@ export class AgentProcess {
         agentProcess.on('error', (err) => {
             console.error('Failed to start agent process:', err);
         });
+    }
+    //finds the location of bots and reports it to the main program so that communication can happen
+    getAgentLocation() {
+        this.agentProcess.send("getLocation");
     }
 }

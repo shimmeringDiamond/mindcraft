@@ -1,5 +1,7 @@
 import * as skills from '../library/skills.js';
 import settings from '../../settings.js';
+import agents from '../agent.js'
+
 
 function wrapExecution(func, timeout=-1, resume_name=null) {
     return async function (agent, ...args) {
@@ -27,6 +29,20 @@ export const actionsList = [
             if (!settings.allow_insecure_coding)
                 return 'newAction Failed! Agent is not allowed to write code. Notify the user.';
             return await agent.coder.generateCode(agent.history);
+        }
+    },
+    {
+        name: '!ask',
+        description: 'Ask all or a specific nearby agent to do something. Designed for ai to ai communicaiton',
+        params: {
+            'ask_name': '(string) The name of the agent/bot you are speaking to '
+        },
+        perform: async function (agent, ask_name) {
+            agents.array.forEach(agent => {
+                if (ask_name == "everyone" || ask_name == agent.name) {
+                    
+                }
+            });
         }
     },
     {

@@ -61,6 +61,10 @@ export class Prompter {
             let inventory = await getCommand('!inventory').perform(this.agent);
             prompt = prompt.replaceAll('$INVENTORY', inventory);
         }
+        if (prompt.includes('$NEIGHBORS')) {
+            let neighbors = await this.agent.getNeighbors();
+            prompt = prompt.replaceAll('$NEIGHBORS', neighbors);
+        }            
         if (prompt.includes('$COMMAND_DOCS'))
             prompt = prompt.replaceAll('$COMMAND_DOCS', getCommandDocs());
         if (prompt.includes('$CODE_DOCS'))
@@ -71,6 +75,7 @@ export class Prompter {
             prompt = prompt.replaceAll('$MEMORY', prev_memory ? prev_memory : 'None.');
         if (prompt.includes('$TO_SUMMARIZE'))
             prompt = prompt.replaceAll('$TO_SUMMARIZE', stringifyTurns(to_summarize));
+        
 
         // check if there are any remaining placeholders with syntax $<word>
         let remaining = prompt.match(/\$[A-Z_]+/g);

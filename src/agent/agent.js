@@ -3,8 +3,25 @@ import { Coder } from './coder.js';
 import { Prompter } from './prompter.js';
 import { initModes } from './modes.js';
 import { initBot } from '../utils/mcdata.js';
+import { Command, GetNeighbors } from '../process/ipc/command.js'
 import { containsCommand, commandExists, executeCommand, truncCommandMessage } from './commands/index.js';
+import { instanceToPlain, plainToClass, plainToInstance } from 'class-transformer';
 
+
+async function awaitMessage(hash) {
+    return new Promise((resolve) => {
+        let timeout = setTimeout(() => {
+            resolve(''); //Send none to prompter if timed out
+        }, 10000);
+
+        process.on('message', (message) => {
+            message = plainToInstance(message);
+            if (message.hash == hash)
+                clearTimeout(timeout);
+                resolve(message)
+        })
+    })
+}
 
 export class Agent {
     async start(profile_fp, load_mem=false, init_message=null) {
@@ -34,16 +51,7 @@ export class Agent {
                 "Set the weather to",
                 "Gamerule "
             ];
-            this.bot.on('chat', (username, message) => { //TODO: change in here to accept messages from other bots, perhaps proximity?
-                if (username === this.name) return;
-                
-                if (ignore_messages.some((m) => message.startsWith(m))) return;
-
-                console.log('received message from', username, ':', message);
-    
-                this.handleMessage(username, message);
-            });
-
+            
             // set the bot to automatically eat food when hungry
             this.bot.autoEat.options = {
                 priority: 'foodPoints',
@@ -66,6 +74,12 @@ export class Agent {
         // newlines are interpreted as separate chats, which triggers spam filters. replace them with spaces
         message = message.replaceAll('\n', '  ');
         return this.bot.chat(message);
+    }
+    
+    async getNeighbors() {
+        let command = new GetNeighbors(this.name, this.bot.entity.position);
+        process.send({message: instanceToPlain(command)});
+        return await awaitMessage(command.hash);
     }
 
     async handleMessage(source, message) {
@@ -94,6 +108,7 @@ export class Agent {
 
         for (let i=0; i<5; i++) {
             let history = this.history.getHistory();
+
             let res = await this.prompter.promptConvo(history);
 
             let command_name = containsCommand(res);

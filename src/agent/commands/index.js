@@ -28,7 +28,6 @@ export function commandExists(commandName) {
     return commandMap[commandName] !== undefined;
 }
 
-// todo: handle arrays?
 function parseCommandMessage(message) {
     const commandMatch = message.match(commandRegex);
     if (commandMatch) {

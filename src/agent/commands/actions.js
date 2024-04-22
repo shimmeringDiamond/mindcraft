@@ -1,6 +1,6 @@
 import * as skills from '../library/skills.js';
 import settings from '../../settings.js';
-import agents from '../agent.js'
+import { Message } from '../../process/ipc/message.js';
 
 
 function wrapExecution(func, timeout=-1, resume_name=null) {
@@ -33,16 +33,14 @@ export const actionsList = [
     },
     {
         name: '!ask',
-        description: 'Ask all or a specific nearby agent to do something. Designed for ai to ai communicaiton',
+        description: 'Pass a command to a nearby minecraft bot to do something.',
         params: {
-            'ask_name': '(string) The name of the agent/bot you are speaking to '
+            'ask_name': '(string) The name of the agent/bot you are speaking to ',
+            'ask_message': '(string) The message to be seent to the agent/bot '
         },
-        perform: async function (agent, ask_name) {
-            agents.array.forEach(agent => {
-                if (ask_name == "everyone" || ask_name == agent.name) {
-                    
-                }
-            });
+        perform: async function (agent, ask_name, ask_message) {
+            //TODO search main.js's list of agent processes via process.send
+            process.send({message: msgpacck.encode(new Message(agent.name, ask_name, ask_message))});
         }
     },
     {

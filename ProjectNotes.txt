@@ -1,0 +1,4 @@
+bots can talk to each other for help with their task
+when bots listen to other bots, ignore unless !ask and their username is mentioned or !ask everyone
+when bots initiate a task, feed them information about other ais in the surrounding area
+then have an !ask command to ask the other bot to do something.

@@ -4,10 +4,10 @@ export class Local {
     constructor(model_name) {
         this.model_name = model_name;
 
-        this.openai = new OpenAIApi(
+        this.openai = new  OpenAIApi(
             {
-                apiKey: process.env.OPENAI_API_KEY,
-                baseURL: process.env.OPENAI_API_BASE,
+                apiKey: process.env.LOCAL_OPENAI_API_KEY,
+                baseURL: process.env.LOCAL_OPENAI_API_BASE,
             }
             );
         }

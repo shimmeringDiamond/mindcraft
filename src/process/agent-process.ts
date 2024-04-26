@@ -1,18 +1,17 @@
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 
 export class AgentProcess {
-    start(profile, load_memory=false, init_message=null) {
-        let args = ['src/process/init-agent.js', this.name];
+    start(profile: string, load_memory=false, init_message: string = "") {
+        let args: string[]  = ['src/process/init-agent.js'];
         args.push('-p', profile);
         if (load_memory)
-            args.push('-l', load_memory);
+            args.push('-l', load_memory.toString());
         if (init_message)
             args.push('-m', init_message);
         
-        //starts child process to initiate an ai agent
-        const agentProcess = spawn('node', args, {
+        //starts child process to initiate an AIs agent
+        const agentProcess: ChildProcess = spawn('node', args, {
             stdio: 'inherit',
-            stderr: 'inherit',
         });
         
         let last_restart = Date.now();

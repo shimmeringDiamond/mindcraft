@@ -32,7 +32,7 @@ Install the minecraft version specified in `settings.json`, currently supports u
 
 Start a minecraft world and open it to LAN on localhost port `55916`
 
-Run `node main.js`
+Run `node main.ts`
 
 You can configure the agent's name, model, and prompts in their profile like `andy.json`.
 

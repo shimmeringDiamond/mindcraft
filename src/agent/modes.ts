@@ -1,6 +1,8 @@
 import * as skills from './library/skills.js';
 import * as world from './library/world.js';
 import * as mc from '../utils/mcdata.js';
+import {Agent} from "./agent";
+import {Entity} from "prismarine-entity";
 
 
 // a mode is a function that is called every tick to respond immediately to the world
@@ -21,11 +23,11 @@ const modes = [
         interrupts: ['all'],
         on: true,
         active: false,
-        update: async function (agent) {
+        update: async function (agent: Agent) {
             const enemy = world.getNearestEntityWhere(agent.bot, entity => mc.isHostile(entity), 9);
             if (enemy && await world.isClearPath(agent.bot, enemy)) {
                 agent.bot.chat(`Fighting ${enemy.name}!`);
-                execute(this, agent, async () => {
+                void execute(this, agent, async () => {
                     await skills.defendSelf(agent.bot, 9);
                 });
             }
@@ -37,10 +39,10 @@ const modes = [
         interrupts: ['defaults'],
         on: true,
         active: false,
-        update: async function (agent) {
+        update: async function (agent: Agent) {
             const huntable = world.getNearestEntityWhere(agent.bot, entity => mc.isHuntable(entity), 8);
             if (huntable && await world.isClearPath(agent.bot, huntable)) {
-                execute(this, agent, async () => {
+                void execute(this, agent, async () => {
                     agent.bot.chat(`Hunting ${huntable.name}!`);
                     await skills.attackEntity(agent.bot, huntable);
                 });
@@ -57,7 +59,7 @@ const modes = [
         wait: 2, // number of seconds to wait after noticing an item to pick it up
         prev_item: null,
         noticed_at: -1,
-        update: async function (agent) {
+        update: async function (agent: Agent) {
             let item = world.getNearestEntityWhere(agent.bot, entity => entity.name === 'item', 8);
             if (item && item !== this.prev_item && await world.isClearPath(agent.bot, item)) {
                 if (this.noticed_at === -1) {
@@ -83,7 +85,7 @@ const modes = [
         interrupts: ['followPlayer'],
         on: true,
         active: false,
-        update: function (agent) {
+        update: function (agent: Agent) {
             // TODO: check light level instead of nearby torches, block.light is broken
             const near_torch = world.getNearestBlock(agent.bot, 'torch', 6);
             if (!near_torch) {
@@ -108,7 +110,7 @@ const modes = [
         staring: false,
         last_entity: null,
         next_change: 0,
-        update: function (agent) {
+        update: function (agent: Agent) {
             const entity = agent.bot.nearestEntity();
             let entity_in_view = entity && entity.position.distanceTo(agent.bot.entity.position) < 10 && entity.name !== 'enderman';
             if (entity_in_view && entity !== this.last_entity) {
@@ -137,7 +139,7 @@ const modes = [
     },
 ];
 
-async function execute(mode, agent, func, timeout=-1) {
+async function execute(mode, agent: Agent, func, timeout=-1) {
     mode.active = true;
     let code_return = await agent.coder.execute(async () => {
         await func();
@@ -147,7 +149,7 @@ async function execute(mode, agent, func, timeout=-1) {
 }
 
 class ModeController {
-    constructor(agent) {
+    constructor(agent: Agent) {
         this.agent = agent;
         this.modes_list = modes;
         this.modes_map = {};

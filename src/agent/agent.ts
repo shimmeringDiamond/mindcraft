@@ -4,10 +4,12 @@ import { Prompter } from './prompter.js';
 import { initModes } from './modes.js';
 import { initBot } from '../utils/mcdata.js';
 import { containsCommand, commandExists, executeCommand, truncCommandMessage } from './commands/index.js';
+import {Bot} from "mineflayer";
 
 
 export class Agent {
-    async start(profile_fp, load_mem=false, init_message=null) {
+    prompter!: Prompter; name!: string; history!: History; coder!: Coder; bot!: Bot;
+    async start(profile_fp: string, load_mem: boolean=false, init_message:string = ""): Promise<void> {
         this.prompter = new Prompter(this, profile_fp);
         this.name = this.prompter.getName();
         this.history = new History(this);

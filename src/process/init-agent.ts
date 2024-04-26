@@ -1,13 +1,17 @@
 import { Agent } from '../agent/agent.js';
 import yargs from 'yargs';
 
-const args = process.argv.slice(2);
+const args: string[] = process.argv.slice(1);
 if (args.length < 1) {
     console.log('Usage: node init_agent.js <agent_name> [profile] [load_memory] [init_message]');
     process.exit(1);
 }
-
-const argv = yargs(args)
+interface  ArgvOptions {
+    profile?: string;
+    load_memory?: boolean;
+    init_message?: string;
+}
+const argv: ArgvOptions = yargs
     .option('profile', {
         alias: 'p',
         type: 'string',
@@ -22,6 +26,6 @@ const argv = yargs(args)
         alias: 'm',
         type: 'string',
         description: 'automatically prompt the agent on startup'
-    }).argv
+    }).argv as unknown as ArgvOptions;
 
-new Agent().start(argv.profile, argv.load_memory, argv.init_message);
+void new Agent().start(argv.profile ?? "", argv.load_memory, argv.init_message);

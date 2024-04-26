@@ -1,8 +1,10 @@
 import pf from 'mineflayer-pathfinder';
 import * as mc from '../../utils/mcdata.js';
+import {Bot} from "mineflayer";
+import {Entity} from 'prismarine-entity'
 
 
-export function getNearestFreeSpace(bot, size=1, distance=8) {
+export function getNearestFreeSpace(bot: Bot, size=1, distance=8) {
     /**
      * Get the nearest empty space with solid blocks beneath it of the given size.
      * @param {Bot} bot - The bot to get the nearest free space for.
@@ -39,7 +41,7 @@ export function getNearestFreeSpace(bot, size=1, distance=8) {
 }
 
 
-export function getNearestBlocks(bot, block_types=null, distance=16, count=10000) {
+export function getNearestBlocks(bot: Bot, block_types =null, distance=16, count=10000) {
     /**
      * Get a list of the nearest blocks of the given types.
      * @param {Bot} bot - The bot to get the nearest block for.
@@ -80,7 +82,7 @@ export function getNearestBlocks(bot, block_types=null, distance=16, count=10000
 }
 
 
-export function getNearestBlock(bot, block_type, distance=16) {
+export function getNearestBlock(bot: Bot, block_type, distance=16) {
      /**
      * Get the nearest block of the given type.
      * @param {Bot} bot - The bot to get the nearest block for.
@@ -98,7 +100,7 @@ export function getNearestBlock(bot, block_type, distance=16) {
 }
 
 
-export function getNearbyEntities(bot, maxDistance=16) {
+export function getNearbyEntities(bot: Bot, maxDistance=16) {
     let entities = [];
     for (const entity of Object.values(bot.entities)) {
         const distance = entity.position.distanceTo(bot.entity.position);
@@ -113,12 +115,12 @@ export function getNearbyEntities(bot, maxDistance=16) {
     return res;
 }
 
-export function getNearestEntityWhere(bot, predicate, maxDistance=16) {
+export function getNearestEntityWhere(bot: Bot, predicate: (entity: Entity) => boolean, maxDistance=16) {
     return bot.nearestEntity(entity => predicate(entity) && bot.entity.position.distanceTo(entity.position) < maxDistance);
 }
 
-
-export function getNearbyPlayers(bot, maxDistance) {
+//TODO: modify this func and send its output to the promter to give to the LLM
+export function getNearbyPlayers(bot: Bot, maxDistance) {
     if (maxDistance == null) maxDistance = 16;
     let players = [];
     for (const entity of Object.values(bot.entities)) {

@@ -1,8 +1,19 @@
 import { writeFile, readFile, mkdirSync } from 'fs';
+import {Agent} from "./agent";
+import {History} from "./history";
+import {error} from "mineflayer-collectblock/lib/Util";
+import {Bot} from "mineflayer";
+import {AgentBot} from "./agent-bot";
 
-
+interface CodingResult {
+    success: boolean;
+    message: string | null;
+    interrupted: boolean;
+    timedout: boolean;
+}
 export class Coder {
-    constructor(agent) {
+    agent: Agent; file_counter: number; fp: string; executing: boolean; generating: boolean; code_template: string; timedout: boolean; resume_func: any;
+    constructor(agent: Agent) {
         this.agent = agent;
         this.file_counter = 0;
         this.fp = '/bots/'+agent.name+'/action-code/';
@@ -18,16 +29,15 @@ export class Coder {
 
         mkdirSync('.' + this.fp, { recursive: true });
     }
-
     // write custom code to file and import it
-    async stageCode(code) {
+    async stageCode(code: string) {
         code = this.sanitizeCode(code);
         let src = '';
-        code = code.replaceAll('console.log(', 'log(bot,');
-        code = code.replaceAll('log("', 'log(bot,"');
+        code = code.replace('console.log(', 'log(bot,');
+        code = code.replace('log("', 'log(bot,"');
 
         // this may cause problems in callback functions
-        code = code.replaceAll(';\n', '; if(bot.interrupt_code) {log(bot, "Code interrupted.");return;}\n');
+        code = code.replace(';\n', '; if(bot.interrupt_code) {log(bot, "Code interrupted.");return;}\n');
         for (let line of code.split('\n')) {
             src += `    ${line}\n`;
         }
@@ -45,16 +55,15 @@ export class Coder {
         // } commented for now, useful to keep files for debugging
         this.file_counter++;
 
-        let write_result = await this.writeFilePromise('.' + this.fp + filename, src)
-        
-        if (write_result) {
-            console.error('Error writing code execution file: ' + result);
+        this.writeFilePromise('.' + this.fp + filename, src).catch(() => {
+            console.error('Error writing code execution file: ' + error);
             return null;
-        }
+        })
+
         return await import('../..' + this.fp + filename);
     }
 
-    sanitizeCode(code) {
+    sanitizeCode(code: string) {
         code = code.trim();
         const remove_strs = ['Javascript', 'javascript', 'js']
         for (let r of remove_strs) {
@@ -66,9 +75,9 @@ export class Coder {
         return code;
     }
 
-    writeFilePromise(filename, src) {
+    writeFilePromise(filename: string, src: string) {
         // makes it so we can await this function
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             writeFile(filename, src, (err) => {
                 if (err) {
                     reject(err);
@@ -79,50 +88,50 @@ export class Coder {
         });
     }
 
-    async generateCode(agent_history) {
+    async generateCode(agent_history: History): Promise<string | null> {
         // wrapper to prevent overlapping code generation loops
         await this.stop();
         this.generating = true;
-        let res = await this.generateCodeLoop(agent_history);
+        let res: CodingResult = await this.generateCodeLoop(agent_history);
         this.generating = false;
-        if (!res.interrupted) this.agent.bot.emit('idle');
+        if (!res.interrupted) this.agent.agentBot.emit('idle');
         return res.message;
     }
 
-    async generateCodeLoop(agent_history) {
+    async generateCodeLoop(agent_history: History): Promise<CodingResult> {
         let messages = agent_history.getHistory();
 
         let code_return = null;
         let failures = 0;
-        const interrupt_return = {success: true, message: null, interrupted: true, timedout: false};
+        const interrupt_return: CodingResult = {success: true, message: null, interrupted: true, timedout: false};
         for (let i=0; i<5; i++) {
-            if (this.agent.bot.interrupt_code)
+            if (this.agent.agentBot.interrupt_code)
                 return interrupt_return;
             console.log(messages)
             let res = await this.agent.prompter.promptCoding(messages);
-            if (this.agent.bot.interrupt_code)
+            if (this.agent.agentBot.interrupt_code)
                 return interrupt_return;
             let contains_code = res.indexOf('```') !== -1;
             if (!contains_code) {
                 if (res.indexOf('!newAction') !== -1) {
                     messages.push({
-                        role: 'assistant', 
+                        role: 'assistant',
                         content: res.substring(0, res.indexOf('!newAction'))
                     });
                     continue; // using newaction will continue the loop
                 }
 
                 if (code_return) {
-                    agent_history.add('system', code_return.message);
-                    agent_history.add(this.agent.name, res);
-                    this.agent.bot.chat(res);
+                    await agent_history.add('system', code_return.message);
+                    await agent_history.add(this.agent.name, res);
+                    this.agent.agentBot.bot.chat(res);
                     return {success: true, message: null, interrupted: false, timedout: false};
                 }
                 if (failures >= 1) {
                     return {success: false, message: 'Action failed, agent would not write code.', interrupted: false, timedout: false};
                 }
                 messages.push({
-                    role: 'system', 
+                    role: 'system',
                     content: 'Error: no code provided. Write code in codeblock in your response. ``` // example ```'}
                 );
                 failures++;
@@ -132,11 +141,11 @@ export class Coder {
 
             const execution_file = await this.stageCode(code);
             if (!execution_file) {
-                agent_history.add('system', 'Failed to stage code, something is wrong.');
+                await agent_history.add('system', 'Failed to stage code, something is wrong.');
                 return {success: false, message: null, interrupted: false, timedout: false};
             }
             code_return = await this.execute(async ()=>{
-                return await execution_file.main(this.agent.bot);
+                return await execution_file.main(this.agent.agentBot);
             });
 
             if (code_return.interrupted && !code_return.timedout)
@@ -155,7 +164,7 @@ export class Coder {
         return {success: false, message: null, interrupted: false, timedout: true};
     }
 
-    async executeResume(func=null, name=null, timeout=10) {
+    async executeResume(func=null, name=null, timeout=10): Promise<CodingResult> {
         if (func != null) {
             this.resume_func = func;
             this.resume_name = name;
@@ -177,7 +186,7 @@ export class Coder {
     }
 
     // returns {success: bool, message: string, interrupted: bool, timedout: false}
-    async execute(func, timeout=10) {
+    async execute(toExecute: () => Promise<any>, timeout=10): Promise<CodingResult> {
         if (!this.code_template) return {success: false, message: "Code template not loaded.", interrupted: false, timedout: false};
 
         let TIMEOUT;
@@ -189,15 +198,15 @@ export class Coder {
             this.executing = true;
             if (timeout > 0)
                 TIMEOUT = this._startTimeout(timeout);
-            await func(); // open fire
+            await toExecute(); // open fire
             this.executing = false;
             clearTimeout(TIMEOUT);
 
-            let output = this.formatOutput(this.agent.bot);
-            let interrupted = this.agent.bot.interrupt_code;
+            let output = this.formatOutput(this.agent.agentBot);
+            let interrupted = this.agent.agentBot.interrupt_code;
             let timedout = this.timedout;
             this.clear();
-            if (!interrupted && !this.generating) this.agent.bot.emit('idle');
+            if (!interrupted && !this.generating) this.agent.agentBot.emit('idle');
             return {success:true, message: output, interrupted, timedout};
         } catch (err) {
             this.executing = false;
@@ -206,17 +215,17 @@ export class Coder {
             console.error("Code execution triggered catch: " + err);
             await this.stop();
 
-            let message = this.formatOutput(this.agent.bot) + '!!Code threw exception!!  Error: ' + err;
-            let interrupted = this.agent.bot.interrupt_code;
+            let message = this.formatOutput(this.agent.agentBot) + '!!Code threw exception!!  Error: ' + err;
+            let interrupted = this.agent.agentBot.interrupt_code;
             this.clear();
-            if (!interrupted && !this.generating) this.agent.bot.emit('idle');
+            if (!interrupted && !this.generating) this.agent.agentBot.emit('idle');
             return {success: false, message, interrupted, timedout: false};
         }
     }
 
-    formatOutput(bot) {
-        if (bot.interrupt_code && !this.timedout) return '';
-        let output = bot.output;
+    formatOutput(agentBot: AgentBot) {
+        if (agentBot.interrupt_code && !this.timedout) return '';
+        let output = agentBot.output;
         const MAX_OUT = 500;
         if (output.length > MAX_OUT) {
             output = `Code output is very long (${output.length} chars) and has been shortened.\n
@@ -232,10 +241,10 @@ export class Coder {
         if (!this.executing) return;
         const start = Date.now();
         while (this.executing) {
-            this.agent.bot.interrupt_code = true;
-            this.agent.bot.collectBlock.cancelTask();
-            this.agent.bot.pathfinder.stop();
-            this.agent.bot.pvp.stop();
+            this.agent.agentBot.interrupt_code = true;
+            void this.agent.agentBot.bot.collectBlock.cancelTask();
+            this.agent.agentBot.bot.pathfinder.stop();
+            void this.agent.agentBot.bot.pvp.stop();
             console.log('waiting for code to finish executing...');
             await new Promise(resolve => setTimeout(resolve, 1000));
             if (Date.now() - start > 10 * 1000) {
@@ -245,8 +254,8 @@ export class Coder {
     }
 
     clear() {
-        this.agent.bot.output = '';
-        this.agent.bot.interrupt_code = false;
+        this.agent.agentBot.output = '';
+        this.agent.agentBot.interrupt_code = false;
         this.timedout = false;
     }
 
@@ -254,14 +263,14 @@ export class Coder {
         return setTimeout(async () => {
             console.warn(`Code execution timed out after ${TIMEOUT_MINS} minutes. Attempting force stop.`);
             this.timedout = true;
-            this.agent.bot.output += `\nAction performed for ${TIMEOUT_MINS} minutes and then timed out and stopped. You may want to continue or do something else.`;
+            this.agent.agentBot.output += `\nAction performed for ${TIMEOUT_MINS} minutes and then timed out and stopped. You may want to continue or do something else.`;
             this.stop(); // last attempt to stop
             await new Promise(resolve => setTimeout(resolve, 5 * 1000)); // wait 5 seconds
             if (this.executing) {
                 console.error(`Failed to stop. Killing process. Goodbye.`);
-                this.agent.bot.output += `\nForce stop failed! Process was killed and will be restarted. Goodbye world.`;
-                this.agent.bot.chat('Goodbye world.');
-                let output = this.formatOutput(this.agent.bot);
+                this.agent.agentBot.output += `\nForce stop failed! Process was killed and will be restarted. Goodbye world.`;
+                this.agent.agentBot.bot.chat('Goodbye world.');
+                let output = this.formatOutput(this.agent.agentBot);
                 this.agent.history.add('system', output);
                 this.agent.history.save();
                 process.exit(1); // force exit program

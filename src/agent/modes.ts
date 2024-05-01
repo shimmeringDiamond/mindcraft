@@ -111,8 +111,8 @@ const modes = [
         last_entity: null,
         next_change: 0,
         update: function (agent: Agent) {
-            const entity = agent.bot.nearestEntity();
-            let entity_in_view = entity && entity.position.distanceTo(agent.bot.entity.position) < 10 && entity.name !== 'enderman';
+            const entity: Entity | null = agent.agentBot.bot.nearestEntity();
+            let entity_in_view = entity && entity.position.distanceTo(agent.agentBot.bot.entity.position) < 10 && entity.name !== 'enderman';
             if (entity_in_view && entity !== this.last_entity) {
                 this.staring = true;
                 this.last_entity = entity;
@@ -121,7 +121,7 @@ const modes = [
             if (entity_in_view && this.staring) {
                 let isbaby = entity.type !== 'player' && entity.metadata[16];
                 let height = isbaby ? entity.height/2 : entity.height;
-                agent.bot.lookAt(entity.position.offset(0, height, 0));
+                void agent.agentBot.bot.lookAt(entity.position.offset(0, height, 0));
             }
             if (!entity_in_view)
                 this.last_entity = null;
@@ -131,7 +131,7 @@ const modes = [
                 if (!this.staring) {
                     const yaw = Math.random() * Math.PI * 2;
                     const pitch = (Math.random() * Math.PI/2) - Math.PI/4;
-                    agent.bot.look(yaw, pitch, false);
+                    agent.agentBot.bot.look(yaw, pitch, false);
                 }
                 this.next_change = Date.now() + Math.random() * 10000 + 2000;
             }
@@ -148,7 +148,8 @@ async function execute(mode, agent: Agent, func, timeout=-1) {
     console.log(`Mode ${mode.name} finished executing, code_return: ${code_return.message}`);
 }
 
-class ModeController {
+export class ModeController {
+    agent: Agent; modes_list: mode[]
     constructor(agent: Agent) {
         this.agent = agent;
         this.modes_list = modes;
@@ -205,7 +206,7 @@ class ModeController {
     }
 }
 
-export function initModes(agent) {
+export function initModes(agent: Agent) {
     // the mode controller is added to the bot object so it is accessible from anywhere the bot is used
-    agent.bot.modes = new ModeController(agent);
+    agent.agentBot.modes = new ModeController(agent);
 }

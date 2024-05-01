@@ -9,10 +9,11 @@ import { Gemini } from '../models/gemini.js';
 import { GPT } from '../models/gpt.js';
 import { Claude } from '../models/claude.js';
 import { Local } from '../models/local.js';
+import {Agent} from "./agent";
 
 
 export class Prompter {
-    constructor(agent, fp) {
+    constructor(agent: Agent, fp: string) {
         this.prompts = JSON.parse(readFileSync(fp, 'utf8'));
         let name = this.prompts.name;
         this.agent = agent;

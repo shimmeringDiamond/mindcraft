@@ -1,8 +1,9 @@
 import * as skills from '../library/skills.js';
 import settings from '../../settings.js';
+import {Agent} from "../agent";
 
 function wrapExecution(func, timeout=-1, resume_name=null) {
-    return async function (agent, ...args) {
+    return async function (agent: Agent, ...args) {
         let code_return;
         if (resume_name != null) {
             code_return = await agent.coder.executeResume(async () => {
@@ -23,7 +24,7 @@ export const actionsList = [
     {
         name: '!newAction',
         description: 'Perform new and unknown custom behaviors that are not available as a command by writing code.', 
-        perform: async function (agent) {
+        perform: async function (agent: Agent) {
             if (!settings.allow_insecure_coding)
                 return 'newAction Failed! Agent is not allowed to write code. Notify the user.';
             return await agent.coder.generateCode(agent.history);
@@ -32,7 +33,7 @@ export const actionsList = [
     {
         name: '!stop',
         description: 'Force stop all actions and commands that are currently executing.',
-        perform: async function (agent) {
+        perform: async function (agent: Agent) {
             await agent.coder.stop();
             agent.coder.clear();
             agent.coder.cancelResume();
@@ -42,14 +43,14 @@ export const actionsList = [
     {
         name: '!restart',
         description: 'Restart the agent process.',
-        perform: async function (agent) {
+        perform: async function (agent: Agent) {
             process.exit(1);
         }
     },
     {
         name: '!clearChat',
         description: 'Clear the chat history.',
-        perform: async function (agent) {
+        perform: async function (agent: Agent) {
             agent.history.clear();
             return agent.name + "'s chat history was cleared, starting new conversation from scratch.";
         }
@@ -61,7 +62,7 @@ export const actionsList = [
             'mode_name': '(string) The name of the mode to enable.',
             'on': '(bool) Whether to enable or disable the mode.'
         },
-        perform: async function (agent, mode_name, on) {
+        perform: async function (agent: Agent, mode_name, on) {
             const modes = agent.bot.modes;
             if (!modes.exists(mode_name))
                 return `Mode ${mode_name} does not exist.` + modes.getStr();
@@ -78,7 +79,7 @@ export const actionsList = [
             'player_name': '(string) The name of the player to go to.',
             'closeness': '(number) How close to get to the player.'
         },
-        perform: wrapExecution(async (agent, player_name, closeness) => {
+        perform: wrapExecution(async (agent: Agent, player_name, closeness) => {
             return await skills.goToPlayer(agent.bot, player_name, closeness);
         })
     },
@@ -89,7 +90,7 @@ export const actionsList = [
             'player_name': '(string) The name of the player to follow.',
             'follow_dist': '(number) The distance to follow from.'
         },
-        perform: wrapExecution(async (agent, player_name, follow_dist) => {
+        perform: wrapExecution(async (agent: Agent, player_name, follow_dist) => {
             await skills.followPlayer(agent.bot, player_name, follow_dist);
         }, -1, 'followPlayer')
     },
@@ -109,7 +110,7 @@ export const actionsList = [
             'item_name': '(string) The name of the item to give.' ,
             'num': '(number) The number of items to give.'
         },
-        perform: wrapExecution(async (agent, player_name, item_name, num) => {
+        perform: wrapExecution(async (agent: Agent, player_name, item_name, num) => {
             await skills.giveToPlayer(agent.bot, item_name, player_name, num);
         })
     },
@@ -120,7 +121,7 @@ export const actionsList = [
             'type': '(string) The block type to collect.',
             'num': '(number) The number of blocks to collect.'
         },
-        perform: wrapExecution(async (agent, type, num) => {
+        perform: wrapExecution(async (agent: Agent, type, num) => {
             await skills.collectBlock(agent.bot, type, num);
         }, 10) // 10 minute timeout
     },
@@ -130,7 +131,7 @@ export const actionsList = [
         params: {
             'type': '(string) The block type to collect.'
         },
-        perform: wrapExecution(async (agent, type) => {
+        perform: wrapExecution(async (agent: Agent, type) => {
             let success = await skills.collectBlock(agent.bot, type, 1);
             if (!success)
                 agent.coder.cancelResume();
@@ -154,7 +155,7 @@ export const actionsList = [
             'item_name': '(string) The name of the input item to smelt.',
             'num': '(number) The number of times to smelt the item.'
         },
-        perform: wrapExecution(async (agent, recipe_name, num) => {
+        perform: wrapExecution(async (agent: Agent, recipe_name, num) => {
             await skills.smeltItem(agent.bot, recipe_name, num);
         })
     },

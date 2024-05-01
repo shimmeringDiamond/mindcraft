@@ -2,7 +2,6 @@ import { writeFile, readFile, mkdirSync } from 'fs';
 import {Agent} from "./agent";
 import {History} from "./history";
 import {error} from "mineflayer-collectblock/lib/Util";
-import {Bot} from "mineflayer";
 import {AgentBot} from "./agent-bot";
 
 interface CodingResult {
@@ -12,7 +11,11 @@ interface CodingResult {
     timedout: boolean;
 }
 export class Coder {
-    agent: Agent; file_counter: number; fp: string; executing: boolean; generating: boolean; code_template: string; timedout: boolean; resume_func: any;
+    agent: Agent; file_counter: number; fp: string; executing: boolean; generating: boolean; code_template: string;
+    timedout: boolean;
+    interruptible!: boolean;
+    resume_func!: (() => Promise<void>) | null;
+    resume_name!: string | null;
     constructor(agent: Agent) {
         this.agent = agent;
         this.file_counter = 0;
@@ -94,7 +97,7 @@ export class Coder {
         this.generating = true;
         let res: CodingResult = await this.generateCodeLoop(agent_history);
         this.generating = false;
-        if (!res.interrupted) this.agent.agentBot.emit('idle');
+        if (!res.interrupted) this.agent.agentBot.emitter.emit('idle');
         return res.message;
     }
 
@@ -206,7 +209,7 @@ export class Coder {
             let interrupted = this.agent.agentBot.interrupt_code;
             let timedout = this.timedout;
             this.clear();
-            if (!interrupted && !this.generating) this.agent.agentBot.emit('idle');
+            if (!interrupted && !this.generating) this.agent.agentBot.emitter.emit('idle');
             return {success:true, message: output, interrupted, timedout};
         } catch (err) {
             this.executing = false;
@@ -218,7 +221,7 @@ export class Coder {
             let message = this.formatOutput(this.agent.agentBot) + '!!Code threw exception!!  Error: ' + err;
             let interrupted = this.agent.agentBot.interrupt_code;
             this.clear();
-            if (!interrupted && !this.generating) this.agent.agentBot.emit('idle');
+            if (!interrupted && !this.generating) this.agent.agentBot.emitter.emit('idle');
             return {success: false, message, interrupted, timedout: false};
         }
     }
@@ -242,7 +245,7 @@ export class Coder {
         const start = Date.now();
         while (this.executing) {
             this.agent.agentBot.interrupt_code = true;
-            void this.agent.agentBot.bot.collectBlock.cancelTask();
+            //void this.agent.agentBot.bot.collectBlock.cancelTask(); CollectBlock does not exist on bot
             this.agent.agentBot.bot.pathfinder.stop();
             void this.agent.agentBot.bot.pvp.stop();
             console.log('waiting for code to finish executing...');

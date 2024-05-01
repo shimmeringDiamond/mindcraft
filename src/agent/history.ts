@@ -1,8 +1,13 @@
 import { writeFileSync, readFileSync } from 'fs';
+import {Agent} from "./agent";
 
-
+interface turn {
+    role: string;
+    content: string;
+}
 export class History {
-    constructor(agent) {
+    agent: Agent; name: string; memory_fp: string; turns: turn[]
+    constructor(agent: Agent) {
         this.agent = agent;
         this.name = agent.name;
         this.memory_fp = `./bots/${this.name}/memory.json`;
@@ -25,7 +30,7 @@ export class History {
         console.log("Memory updated to: ", this.memory);
     }
 
-    async add(name, content) {
+    async add(name: string, content: string) {
         let role = 'assistant';
         if (name === 'system') {
             role = 'system';

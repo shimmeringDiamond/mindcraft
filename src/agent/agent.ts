@@ -1,9 +1,7 @@
 import { History } from './history.js';
 import { Coder } from './coder.js';
 import { Prompter } from './prompter.js';
-import { initBot } from '../utils/mcdata.js';
 import { containsCommand, commandExists, executeCommand, truncCommandMessage } from './commands';
-import {Bot} from "mineflayer";
 import {AgentBot} from "./agent-bot";
 
 
@@ -20,7 +18,7 @@ export class Agent  {
             this.history.load();
 
         console.log('Logging in...');
-        this.agentBot = new AgentBot(this.name);
+        this.agentBot = new AgentBot(this);
 
 
         this.agentBot.bot.once('spawn', async () => {
@@ -159,7 +157,6 @@ export class Agent  {
             console.warn('Bot kicked!', reason);
             process.exit(1);
         });
-
         this.agentBot.bot.on('messagestr', async (message, _, jsonMsg) => {
             if (jsonMsg.translate && jsonMsg.translate.startsWith('death') && message.startsWith(this.name)) {
                 console.log('Agent died: ', message);

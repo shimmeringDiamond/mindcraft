@@ -1,8 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { GPT } from './gpt.js';
+import {Model} from "./model";
+import {turn} from "../agent/history";
 
-export class Claude {
-    constructor(model_name) {
+export class Claude implements Model{
+    model_name: string; anthropic: Anthropic; gpt: GPT | undefined;
+    constructor(model_name: string) {
         this.model_name = model_name;
         if (!process.env.ANTHROPIC_API_KEY) {
             throw new Error('Anthropic API key missing! Make sure you set your ANTHROPIC_API_KEY environment variable.');
@@ -14,13 +17,13 @@ export class Claude {
 
         this.gpt = undefined;
         try {
-            this.gpt = new GPT(); // use for embeddings, ignore model
+            this.gpt = new GPT(""); // use for embeddings, ignore model
         } catch (err) {
             console.warn('Claude uses the OpenAI API for embeddings, but no OPENAI_API_KEY env variable was found. Claude will still work, but performance will suffer.');
         }
     }
 
-    async sendRequest(turns, systemMessage) {
+    async sendRequest(turns: turn[], systemMessage: string) {
         let prev_role = null;
         let messages = [];
         let filler = {role: 'user', content: '_'};
@@ -56,7 +59,7 @@ export class Claude {
                 model: this.model_name,
                 system: systemMessage,
                 max_tokens: 2048,
-                messages: messages,
+                messages: messages as any,
             });
             console.log('Received.')
             res = resp.content[0].text;
@@ -68,12 +71,14 @@ export class Claude {
         return res;
     }
 
-    async embed(text) {
+    async embed(text: string) {
         if (this.gpt) {
             return await this.gpt.embed(text);
         }
         // if no gpt, just return random embedding
-        return Array(1).fill().map(() => Math.random());
+        return Array.from({length: 1280}, () => Math.floor(Math.random()));
+
+
     }
 }
 

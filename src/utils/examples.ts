@@ -1,8 +1,10 @@
 import { cosineSimilarity } from './math.js';
 import { stringifyTurns } from './text.js';
+import {turn} from "../agent/history";
+import {Model} from "../models/model";
 
 export class Examples {
-    constructor(model, select_num=2) {
+    constructor(model: Model, select_num=2) {
         this.examples = [];
         this.model = model;
         this.select_num = select_num;
@@ -10,7 +12,7 @@ export class Examples {
 
     async load(examples) {
         this.examples = [];
-        let promises = examples.map(async (example) => {
+        let promises = examples.map(async (example: string) => {
             let messages = '';
             for (let turn of example) {
                 if (turn.role === 'user')
@@ -23,7 +25,7 @@ export class Examples {
         this.examples = await Promise.all(promises);
     }
 
-    async getRelevant(turns) {
+    async getRelevant(turns: turn[]) {
         let messages = '';
         for (let turn of turns) {
             if (turn.role != 'assistant')
@@ -38,7 +40,7 @@ export class Examples {
         return JSON.parse(JSON.stringify(selected)); // deep copy
     }
 
-    async createExampleMessage(turns) {
+    async createExampleMessage(turns: turn[]) {
         let selected_examples = await this.getRelevant(turns);
 
         console.log('selected examples:');

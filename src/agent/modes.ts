@@ -16,19 +16,37 @@ import {Entity} from "prismarine-entity";
 // the order of this list matters! first modes will be prioritized
 // while update functions are async, they should *not* be awaited longer than ~100ms as it will block the update loop
 // to perform longer actions, use the execute function which won't block the update loop
-const modes = [
+interface  mode {
+    name: string;
+    description: string;
+    interrupts: string[];
+    on: boolean;
+    active: boolean;
+    update: (agent: Agent) => void;
+    paused: boolean;
+
+    wait?: number;
+    prev_item?: Entity | null;
+    noticed_at?: number;
+
+    staring?: boolean;
+    last_entity?: null | Entity;
+    next_change?: number;
+}
+const modes: mode[] = [
     {
         name: 'self_defense',
         description: 'Automatically attack nearby enemies. Interrupts other actions.',
         interrupts: ['all'],
         on: true,
+        paused: false,
         active: false,
         update: async function (agent: Agent) {
-            const enemy = world.getNearestEntityWhere(agent.bot, entity => mc.isHostile(entity), 9);
-            if (enemy && await world.isClearPath(agent.bot, enemy)) {
-                agent.bot.chat(`Fighting ${enemy.name}!`);
+            const enemy = world.getNearestEntityWhere(agent.agentBot.bot, entity => mc.isHostile(entity), 9);
+            if (enemy && await world.isClearPath(agent.agentBot.bot, enemy)) {
+                agent.agentBot.bot.chat(`Fighting ${enemy.name}!`);
                 void execute(this, agent, async () => {
-                    await skills.defendSelf(agent.bot, 9);
+                    await skills.defendSelf(agent.agentBot.bot, 9);
                 });
             }
         }
@@ -38,13 +56,14 @@ const modes = [
         description: 'Automatically hunt nearby animals when idle.',
         interrupts: ['defaults'],
         on: true,
+        paused: false,
         active: false,
         update: async function (agent: Agent) {
-            const huntable = world.getNearestEntityWhere(agent.bot, entity => mc.isHuntable(entity), 8);
-            if (huntable && await world.isClearPath(agent.bot, huntable)) {
+            const huntable = world.getNearestEntityWhere(agent.agentBot.bot, entity => mc.isHuntable(entity), 8);
+            if (huntable && await world.isClearPath(agent.agentBot.bot, huntable)) {
                 void execute(this, agent, async () => {
-                    agent.bot.chat(`Hunting ${huntable.name}!`);
-                    await skills.attackEntity(agent.bot, huntable);
+                    agent.agentBot.bot.chat(`Hunting ${huntable.name}!`);
+                    await skills.attackEntity(agent.agentBot.bot, huntable);
                 });
             }
         }
@@ -54,22 +73,23 @@ const modes = [
         description: 'Automatically collect nearby items when idle.',
         interrupts: ['followPlayer'],
         on: true,
+        paused: false,
         active: false,
 
         wait: 2, // number of seconds to wait after noticing an item to pick it up
         prev_item: null,
         noticed_at: -1,
         update: async function (agent: Agent) {
-            let item = world.getNearestEntityWhere(agent.bot, entity => entity.name === 'item', 8);
-            if (item && item !== this.prev_item && await world.isClearPath(agent.bot, item)) {
+            let item = world.getNearestEntityWhere(agent.agentBot.bot, entity => entity.name === 'item', 8);
+            if (item && item !== this.prev_item && await world.isClearPath(agent.agentBot.bot, item)) {
                 if (this.noticed_at === -1) {
                     this.noticed_at = Date.now();
                 }
-                if (Date.now() - this.noticed_at > this.wait * 1000) {
-                    agent.bot.chat(`Picking up ${item.name}!`);
+                if (Date.now() - this.noticed_at! > this.wait! * 1000) {
+                    agent.agentBot.bot.chat(`Picking up ${item.name}!`);
                     this.prev_item = item;
-                    execute(this, agent, async () => {
-                        await skills.pickupNearbyItems(agent.bot);
+                    void execute(this, agent, async () => {
+                        await skills.pickupNearbyItems(agent.agentBot.bot);
                     });
                     this.noticed_at = -1;
                 }
@@ -84,17 +104,18 @@ const modes = [
         description: 'Automatically place torches when idle and there are no torches nearby.',
         interrupts: ['followPlayer'],
         on: true,
+        paused: false,
         active: false,
         update: function (agent: Agent) {
             // TODO: check light level instead of nearby torches, block.light is broken
-            const near_torch = world.getNearestBlock(agent.bot, 'torch', 6);
+            const near_torch = world.getNearestBlock(agent.agentBot.bot, 'torch', 6);
             if (!near_torch) {
-                let torches = agent.bot.inventory.items().filter(item => item.name.includes('torch'));
+                let torches = agent.agentBot.bot.inventory.items().filter(item => item.name.includes('torch'));
                 if (torches.length > 0) {
                     const torch = torches[0];
-                    const pos = agent.bot.entity.position;
-                    execute(this, agent, async () => {
-                        await skills.placeBlock(agent.bot, torch.name, pos.x, pos.y, pos.z);
+                    const pos = agent.agentBot.bot.entity.position;
+                    void execute(this, agent, async () => {
+                        await skills.placeBlock(agent.agentBot.bot, torch.name, pos.x, pos.y, pos.z);
                     });
                 }
             }
@@ -105,6 +126,7 @@ const modes = [
         description: 'Non-functional animation to look around at entities when idle.',
         interrupts: [],
         on: true,
+        paused: false,
         active: false,
 
         staring: false,
@@ -119,13 +141,13 @@ const modes = [
                 this.next_change = Date.now() + Math.random() * 1000 + 4000;
             }
             if (entity_in_view && this.staring) {
-                let isbaby = entity.type !== 'player' && entity.metadata[16];
-                let height = isbaby ? entity.height/2 : entity.height;
-                void agent.agentBot.bot.lookAt(entity.position.offset(0, height, 0));
+                let isbaby = entity!.type !== 'player' && entity!.metadata[16];
+                let height = isbaby ? entity!.height/2 : entity!.height;
+                void agent.agentBot.bot.lookAt(entity!.position.offset(0, height, 0));
             }
             if (!entity_in_view)
                 this.last_entity = null;
-            if (Date.now() > this.next_change) {
+            if (Date.now() > this.next_change!) {
                 // look in random direction
                 this.staring = Math.random() < 0.3;
                 if (!this.staring) {
@@ -139,7 +161,7 @@ const modes = [
     },
 ];
 
-async function execute(mode, agent: Agent, func, timeout=-1) {
+async function execute(mode: mode, agent: Agent, func: () => Promise<void>, timeout=-1) {
     mode.active = true;
     let code_return = await agent.coder.execute(async () => {
         await func();
@@ -149,7 +171,7 @@ async function execute(mode, agent: Agent, func, timeout=-1) {
 }
 
 export class ModeController {
-    agent: Agent; modes_list: mode[]
+    agent: Agent; modes_list: mode[]; modes_map: {[key: string]: mode}
     constructor(agent: Agent) {
         this.agent = agent;
         this.modes_list = modes;
@@ -159,19 +181,19 @@ export class ModeController {
         }
     }
 
-    exists(mode_name) {
+    exists(mode_name: string) {
         return this.modes_map[mode_name] != null;
     }
 
-    setOn(mode_name, on) {
+    setOn(mode_name: string, on: boolean) {
         this.modes_map[mode_name].on = on;
     }
 
-    isOn(mode_name) {
+    isOn(mode_name: string) {
         return this.modes_map[mode_name].on;
     }
 
-    pause(mode_name) {
+    pause(mode_name: string) {
         this.modes_map[mode_name].paused = true;
     }
 
@@ -197,9 +219,9 @@ export class ModeController {
         }
         for (let mode of this.modes_list) {
             let available = mode.interrupts.includes('all') || this.agent.isIdle();
-            let interruptible = this.agent.coder.interruptible && (mode.interrupts.includes('defaults') || mode.interrupts.includes(this.agent.coder.resume_name));
+            let interruptible = this.agent.coder.interruptible && (mode.interrupts.includes('defaults') || mode.interrupts.includes(this.agent.coder.resume_name??""));
             if (mode.on && !mode.paused && !mode.active && (available || interruptible)) {
-                await mode.update(this.agent);
+                mode.update(this.agent);
             }
             if (mode.active) break;
         }

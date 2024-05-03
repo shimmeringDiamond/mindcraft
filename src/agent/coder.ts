@@ -125,7 +125,7 @@ export class Coder {
                 }
 
                 if (code_return) {
-                    await agent_history.add('system', code_return.message);
+                    await agent_history.add('system', code_return.message??"");
                     await agent_history.add(this.agent.name, res);
                     this.agent.agentBot.bot.chat(res);
                     return {success: true, message: null, interrupted: false, timedout: false};

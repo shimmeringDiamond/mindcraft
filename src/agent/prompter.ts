@@ -10,21 +10,33 @@ import { GPT } from '../models/gpt.js';
 import { Claude } from '../models/claude.js';
 import { Local } from '../models/local.js';
 import {Agent} from "./agent";
+import {turn} from "./history";
+import {Model} from "../models/model";
 
-
+interface Prompts {
+    name: string;
+    model: string;
+    conversing: string;
+    coding: string;
+    saving_memory: string;
+    conversation_examples: turn[][]
+    coding_examples: turn[][]
+}
 export class Prompter {
+    prompts: Prompts; agent: Agent; model: Model; convo_examples!: Examples; coding_examples!: Examples
     constructor(agent: Agent, fp: string) {
         this.prompts = JSON.parse(readFileSync(fp, 'utf8'));
         let name = this.prompts.name;
         this.agent = agent;
         let model_name = this.prompts.model;
         mkdirSync(`./bots/${name}`, { recursive: true });
-        writeFileSync(`./bots/${name}/last_profile.json`, JSON.stringify(this.prompts, null, 4), (err) => {
-            if (err) {
-                throw err;
-            }
+        try {
+            writeFileSync(`./bots/${name}/last_profile.json`, JSON.stringify(this.prompts, null, 4));
             console.log("Copy profile saved.");
-        });
+        } catch (err) {
+            throw err;
+        }
+
 
         if (model_name.includes('gemini'))
             this.model = new Gemini(model_name);
@@ -32,8 +44,6 @@ export class Prompter {
             this.model = new GPT(model_name);
         else if (model_name.includes('claude'))
             this.model = new Claude(model_name);
-        else if (model_name.includes('local'))
-            this.model = new Local(model_name);
         else
             throw new Error('Unknown model ' + model_name);
     }
@@ -51,7 +61,7 @@ export class Prompter {
         console.log('Examples loaded.');
     }
 
-    async replaceStrings(prompt, messages, examples=null, prev_memory=null, to_summarize=[]) {
+    async replaceStrings(prompt: string, messages: turn[] | null, examples: Examples | null =null, prev_memory: string | null=null, to_summarize: turn[]=[]) {
         prompt = prompt.replaceAll('$NAME', this.agent.name);
 
         if (prompt.includes('$STATS')) {
@@ -67,7 +77,7 @@ export class Prompter {
         if (prompt.includes('$CODE_DOCS'))
             prompt = prompt.replaceAll('$CODE_DOCS', getSkillDocs());
         if (prompt.includes('$EXAMPLES') && examples !== null)
-            prompt = prompt.replaceAll('$EXAMPLES', await examples.createExampleMessage(messages));
+            prompt = prompt.replaceAll('$EXAMPLES', await examples.createExampleMessage(messages?? []));
         if (prompt.includes('$MEMORY'))
             prompt = prompt.replaceAll('$MEMORY', prev_memory ? prev_memory : 'None.');
         if (prompt.includes('$TO_SUMMARIZE'))
@@ -81,19 +91,19 @@ export class Prompter {
         return prompt;
     }
 
-    async promptConvo(messages) {
+    async promptConvo(messages: turn[]) {
         let prompt = this.prompts.conversing;
         prompt = await this.replaceStrings(prompt, messages, this.convo_examples);
         return await this.model.sendRequest(messages, prompt);
     }
 
-    async promptCoding(messages) {
+    async promptCoding(messages: turn[]) {
         let prompt = this.prompts.coding;
         prompt = await this.replaceStrings(prompt, messages, this.coding_examples);
         return await this.model.sendRequest(messages, prompt);
     }
 
-    async promptMemSaving(prev_mem, to_summarize) {
+    async promptMemSaving(prev_mem: string, to_summarize: turn[]) {
         let prompt = this.prompts.saving_memory;
         prompt = await this.replaceStrings(prompt, null, null, prev_mem, to_summarize);
         return await this.model.sendRequest([], prompt);

@@ -1,7 +1,11 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {GenerativeModel, GoogleGenerativeAI} from '@google/generative-ai';
+import {turn} from "../agent/history";
+import {Model} from "./model";
 
-export class Gemini {
-    constructor(model_name) {
+export class Gemini implements Model{
+    model_name: string; genAI: GoogleGenerativeAI; llmModel: GenerativeModel; embedModel: GenerativeModel
+    constructor(model_name: string) {
+        this.model_name = model_name;
         if (!process.env.GEMINI_API_KEY) {
             throw new Error('Gemini API key missing! Make sure you set your GEMINI_API_KEY environment variable.');
         }
@@ -12,7 +16,7 @@ export class Gemini {
         this.embedModel = this.genAI.getGenerativeModel({ model: "embedding-001"});
     }
 
-    async sendRequest(turns, systemMessage) {
+    async sendRequest(turns: turn[], systemMessage: string) {
         const messages = [{'role': 'system', 'content': systemMessage}].concat(turns);
         let prompt = "";
         let role = "";
@@ -29,8 +33,8 @@ export class Gemini {
         return response.text();
     }
 
-    async embed(text) {
+    async embed(text: string) {
         const result = await this.embedModel.embedContent(text);
-        return result.embedding;
+        return result.embedding.values;
     }
 }

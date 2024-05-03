@@ -1,12 +1,12 @@
 import { writeFileSync, readFileSync } from 'fs';
 import {Agent} from "./agent";
 
-interface turn {
+export interface turn {
     role: string;
     content: string;
 }
 export class History {
-    agent: Agent; name: string; memory_fp: string; turns: turn[]
+    agent: Agent; name: string; memory_fp: string; turns: turn[]; memory: string; max_messages: number;
     constructor(agent: Agent) {
         this.agent = agent;
         this.name = agent.name;
@@ -24,7 +24,7 @@ export class History {
         return JSON.parse(JSON.stringify(this.turns));
     }
 
-    async storeMemories(turns) {
+    async storeMemories(turns: turn[]) {
         console.log("Storing memories...");
         this.memory = await this.agent.prompter.promptMemSaving(this.memory, turns);
         console.log("Memory updated to: ", this.memory);
@@ -46,7 +46,7 @@ export class History {
             let to_summarize = [this.turns.shift()];
             while (this.turns[0].role != 'user' && this.turns.length > 1)
                 to_summarize.push(this.turns.shift());
-            await this.storeMemories(to_summarize);
+            await this.storeMemories(to_summarize as turn[]);
         }
     }
 
@@ -58,12 +58,12 @@ export class History {
             'turns': this.turns
         };
         const json_data = JSON.stringify(data, null, 4);
-        writeFileSync(this.memory_fp, json_data, (err) => {
-            if (err) {
-                throw err;
-            }
-            console.log("JSON data is saved.");
-        });
+        try {
+            writeFileSync(this.memory_fp, json_data);
+            console.log("JSON data is saved");
+        } catch (err) {
+            throw err;
+        }
     }
 
     load() {

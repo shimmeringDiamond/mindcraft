@@ -111,7 +111,7 @@ export class Coder {
             if (this.agent.agentBot.interrupt_code)
                 return interrupt_return;
             console.log(messages)
-            let res = await this.agent.prompter.promptCoding(messages);
+            let res = await this.agent.prompter.promptCoding(messages)?? "";
             if (this.agent.agentBot.interrupt_code)
                 return interrupt_return;
             let contains_code = res.indexOf('```') !== -1;

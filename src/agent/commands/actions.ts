@@ -2,6 +2,12 @@ import * as skills from '../library/skills.js';
 import settings from '../../settings.js';
 import {Agent} from "../agent";
 
+interface action {
+    name: string;
+    description: string;
+    params?:
+    perform: (agent: Agent) => Promise<string | null>;
+}
 function wrapExecution(func, timeout=-1, resume_name=null) {
     return async function (agent: Agent, ...args) {
         let code_return;
@@ -20,7 +26,7 @@ function wrapExecution(func, timeout=-1, resume_name=null) {
     }
 }
 
-export const actionsList = [
+export const actionsList: [action] = [
     {
         name: '!newAction',
         description: 'Perform new and unknown custom behaviors that are not available as a command by writing code.', 
@@ -132,7 +138,7 @@ export const actionsList = [
             'type': '(string) The block type to collect.'
         },
         perform: wrapExecution(async (agent: Agent, type) => {
-            let success = await skills.collectBlock(agent.bot, type, 1);
+            let success = await skills.collectBlock(agent.agentBot.bot, type, 1);
             if (!success)
                 agent.coder.cancelResume();
         }, 10, 'collectAllBlocks') // 10 minute timeout
@@ -144,8 +150,8 @@ export const actionsList = [
             'recipe_name': '(string) The name of the output item to craft.',
             'num': '(number) The number of times to craft the recipe. This is NOT the number of output items, as it may craft many more items depending on the recipe.'
         },
-        perform: wrapExecution(async (agent, recipe_name, num) => {
-            await skills.craftRecipe(agent.bot, recipe_name, num);
+        perform: wrapExecution(async (agent: Agent, recipe_name: string, num: number) => {
+            await skills.craftRecipe(agent.agentBot.bot, recipe_name, num);
         })
     },
     {
@@ -155,39 +161,39 @@ export const actionsList = [
             'item_name': '(string) The name of the input item to smelt.',
             'num': '(number) The number of times to smelt the item.'
         },
-        perform: wrapExecution(async (agent: Agent, recipe_name, num) => {
-            await skills.smeltItem(agent.bot, recipe_name, num);
+        perform: wrapExecution(async (agent: Agent, recipe_name: string, num: number) => {
+            await skills.smeltItem(agent.agentBot.bot, recipe_name, num);
         })
     },
     {
         name: '!placeHere',
         description: 'Place a given block in the current location. Do NOT use to build structures, only use for single blocks/torches.',
         params: {'type': '(string) The block type to place.'},
-        perform: wrapExecution(async (agent, type) => {
-            let pos = agent.bot.entity.position;
-            await skills.placeBlock(agent.bot, type, pos.x, pos.y, pos.z);
+        perform: wrapExecution(async (agent:Agent, type) => {
+            let pos = agent.agentBot.bot.entity.position;
+            await skills.placeBlock(agent.agentBot.bot, type, pos.x, pos.y, pos.z);
         })
     },
     {
         name: '!attack',
         description: 'Attack and kill the nearest entity of a given type.',
         params: {'type': '(string) The type of entity to attack.'},
-        perform: wrapExecution(async (agent, type) => {
-            await skills.attackNearest(agent.bot, type, true);
+        perform: wrapExecution(async (agent: Agent, type) => {
+            await skills.attackNearest(agent.agentBot.bot, type, true);
         })
     },
     {
         name: '!goToBed',
         description: 'Go to the nearest bed and sleep.',
-        perform: wrapExecution(async (agent) => {
-            await skills.goToBed(agent.bot);
+        perform: wrapExecution(async (agent: Agent) => {
+            await skills.goToBed(agent.agentBot.bot);
         })
     },
     {
         name: '!stay',
         description: 'Stay in the current location no matter what. Pauses all modes.',
-        perform: wrapExecution(async (agent) => {
-            await skills.stay(agent.bot);
+        perform: wrapExecution(async (agent: Agent) => {
+            await skills.stay(agent.agentBot.bot);
         })
     }
 ];

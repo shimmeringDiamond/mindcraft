@@ -60,8 +60,8 @@ function parseCommandMessage(message) {
     return null;
 }
 
-export function truncCommandMessage(message) {
-    const commandMatch = message.match(commandRegex);
+export function truncCommandMessage(message: string) {
+    const commandMatch: RegExpMatchArray | null = message.match(commandRegex);
     if (commandMatch) {
         return message.substring(0, commandMatch.index + commandMatch[0].length);
     }

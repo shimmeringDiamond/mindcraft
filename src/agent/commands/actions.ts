@@ -5,11 +5,11 @@ import {Agent} from "../agent";
 interface action {
     name: string;
     description: string;
-    params?:
-    perform: (agent: Agent) => Promise<string | null>;
+    params?: {[key: string]: string}
+    perform: (agent: Agent, ...args: any[]) => Promise<string | null | undefined>;
 }
-function wrapExecution(func, timeout=-1, resume_name=null) {
-    return async function (agent: Agent, ...args) {
+function wrapExecution(func: (...args: any[]) => Promise<boolean | void>, timeout=-1, resume_name: null | string =null) {
+    return async function (agent: Agent, ...args: any[]): Promise<string | null | undefined> {
         let code_return;
         if (resume_name != null) {
             code_return = await agent.coder.executeResume(async () => {
@@ -26,7 +26,7 @@ function wrapExecution(func, timeout=-1, resume_name=null) {
     }
 }
 
-export const actionsList: [action] = [
+export const actionsList: action[]= [
     {
         name: '!newAction',
         description: 'Perform new and unknown custom behaviors that are not available as a command by writing code.', 
@@ -68,8 +68,8 @@ export const actionsList: [action] = [
             'mode_name': '(string) The name of the mode to enable.',
             'on': '(bool) Whether to enable or disable the mode.'
         },
-        perform: async function (agent: Agent, mode_name, on) {
-            const modes = agent.bot.modes;
+        perform: async function (agent: Agent, mode_name: string, on: boolean) {
+            const modes = agent.agentBot.modes;
             if (!modes.exists(mode_name))
                 return `Mode ${mode_name} does not exist.` + modes.getStr();
             if (modes.isOn(mode_name) === on)
@@ -85,8 +85,8 @@ export const actionsList: [action] = [
             'player_name': '(string) The name of the player to go to.',
             'closeness': '(number) How close to get to the player.'
         },
-        perform: wrapExecution(async (agent: Agent, player_name, closeness) => {
-            return await skills.goToPlayer(agent.bot, player_name, closeness);
+        perform: wrapExecution(async (agent: Agent, player_name: string, closeness: number) => {
+            return await skills.goToPlayer(agent.agentBot.bot, player_name, closeness);
         })
     },
     {
@@ -96,16 +96,16 @@ export const actionsList: [action] = [
             'player_name': '(string) The name of the player to follow.',
             'follow_dist': '(number) The distance to follow from.'
         },
-        perform: wrapExecution(async (agent: Agent, player_name, follow_dist) => {
-            await skills.followPlayer(agent.bot, player_name, follow_dist);
+        perform: wrapExecution(async (agent: Agent, player_name: string, follow_dist: number) => {
+            await skills.followPlayer(agent.agentBot.bot, player_name, follow_dist);
         }, -1, 'followPlayer')
     },
     {
         name: '!moveAway',
         description: 'Move away from the current location in any direction by a given distance.',
         params: {'distance': '(number) The distance to move away.'},
-        perform: wrapExecution(async (agent, distance) => {
-            await skills.moveAway(agent.bot, distance);
+        perform: wrapExecution(async (agent: Agent, distance: number) => {
+            await skills.moveAway(agent.agentBot.bot, distance);
         })
     },
     {
@@ -116,8 +116,8 @@ export const actionsList: [action] = [
             'item_name': '(string) The name of the item to give.' ,
             'num': '(number) The number of items to give.'
         },
-        perform: wrapExecution(async (agent: Agent, player_name, item_name, num) => {
-            await skills.giveToPlayer(agent.bot, item_name, player_name, num);
+        perform: wrapExecution(async (agent: Agent, player_name: string, item_name: string, num: number ) => {
+            await skills.giveToPlayer(agent.agentBot.bot, item_name, player_name, num);
         })
     },
     {
@@ -127,8 +127,8 @@ export const actionsList: [action] = [
             'type': '(string) The block type to collect.',
             'num': '(number) The number of blocks to collect.'
         },
-        perform: wrapExecution(async (agent: Agent, type, num) => {
-            await skills.collectBlock(agent.bot, type, num);
+        perform: wrapExecution(async (agent: Agent, type: string, num: number) => {
+            await skills.collectBlock(agent.agentBot.bot, type, num);
         }, 10) // 10 minute timeout
     },
     {
@@ -137,7 +137,7 @@ export const actionsList: [action] = [
         params: {
             'type': '(string) The block type to collect.'
         },
-        perform: wrapExecution(async (agent: Agent, type) => {
+        perform: wrapExecution(async (agent: Agent, type: string) => {
             let success = await skills.collectBlock(agent.agentBot.bot, type, 1);
             if (!success)
                 agent.coder.cancelResume();
@@ -169,7 +169,7 @@ export const actionsList: [action] = [
         name: '!placeHere',
         description: 'Place a given block in the current location. Do NOT use to build structures, only use for single blocks/torches.',
         params: {'type': '(string) The block type to place.'},
-        perform: wrapExecution(async (agent:Agent, type) => {
+        perform: wrapExecution(async (agent:Agent, type: string) => {
             let pos = agent.agentBot.bot.entity.position;
             await skills.placeBlock(agent.agentBot.bot, type, pos.x, pos.y, pos.z);
         })
@@ -178,7 +178,7 @@ export const actionsList: [action] = [
         name: '!attack',
         description: 'Attack and kill the nearest entity of a given type.',
         params: {'type': '(string) The type of entity to attack.'},
-        perform: wrapExecution(async (agent: Agent, type) => {
+        perform: wrapExecution(async (agent: Agent, type: string) => {
             await skills.attackNearest(agent.agentBot.bot, type, true);
         })
     },

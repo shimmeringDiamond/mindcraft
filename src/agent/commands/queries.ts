@@ -1,18 +1,19 @@
 import * as world from '../library/world.js';
 import * as mc from '../../utils/mcdata.js';
+import {action} from "./actions";
 
 
-const pad = (str) => {
+const pad = (str: string) => {
     return '\n' + str + '\n';
 }
 
 // queries are commands that just return strings and don't affect anything in the world
-export const queryList = [
+export const queryList: action[] = [
     {
         name: "!stats",
         description: "Get your bot's location, health, hunger, and time of day.", 
         perform: function (agent) {
-            let bot = agent.bot;
+            let bot = agent.agentBot.bot;
             let res = 'STATS';
             let pos = bot.entity.position;
             // display position to 2 decimal places
@@ -50,7 +51,7 @@ export const queryList = [
         name: "!inventory",
         description: "Get your bot's inventory.",
         perform: function (agent) {
-            let bot = agent.bot;
+            let bot = agent.agentBot.bot;
             let inventory = world.getInventoryCounts(bot);
             let res = 'INVENTORY';
             for (const item in inventory) {
@@ -67,7 +68,7 @@ export const queryList = [
         name: "!nearbyBlocks",
         description: "Get the blocks near the bot.",
         perform: function (agent) {
-            let bot = agent.bot;
+            let bot = agent.agentBot.bot;
             let res = 'NEARBY_BLOCKS';
             let blocks = world.getNearbyBlockTypes(bot);
             for (let i = 0; i < blocks.length; i++) {
@@ -83,7 +84,7 @@ export const queryList = [
         name: "!craftable",
         description: "Get the craftable items with the bot's inventory.",
         perform: function (agent) {
-            const bot = agent.bot;
+            const bot = agent.agentBot.bot;
             const table = world.getNearestBlock(bot, 'crafting_table');
             let res = 'CRAFTABLE_ITEMS';
             for (const item of mc.getAllItems()) {
@@ -102,7 +103,7 @@ export const queryList = [
         name: "!entities",
         description: "Get the nearby players and entities.",
         perform: function (agent) {
-            let bot = agent.bot;
+            let bot = agent.agentBot.bot;
             let res = 'NEARBY_ENTITIES';
             for (const entity of world.getNearbyPlayerNames(bot)) {
                 res += `\n- player: ${entity}`;
@@ -120,7 +121,7 @@ export const queryList = [
         name: "!modes",
         description: "Get all available modes and see which are on/off.",
         perform: function (agent) {
-            return agent.bot.modes.getStr();
+            return agent.agentBot.modes.getStr();
         }
     }
 ];

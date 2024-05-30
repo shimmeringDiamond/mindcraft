@@ -2,11 +2,11 @@ import * as skills from '../library/skills.js';
 import settings from '../../settings.js';
 import {Agent} from "../agent";
 
-interface action {
+export interface action {
     name: string;
     description: string;
     params?: {[key: string]: string}
-    perform: (agent: Agent, ...args: any[]) => Promise<string | null | undefined>;
+    perform: (agent: Agent, ...args: any[]) => Promise<string | null | undefined> | string | null | undefined;
 }
 function wrapExecution(func: (...args: any[]) => Promise<boolean | void>, timeout=-1, resume_name: null | string =null) {
     return async function (agent: Agent, ...args: any[]): Promise<string | null | undefined> {

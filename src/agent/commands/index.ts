@@ -1,35 +1,36 @@
-import { actionsList } from './actions.js';
+import {action, actionsList} from './actions.js';
 import { queryList } from './queries.js';
+import {Agent} from "../agent";
 
 
-const commandList = queryList.concat(actionsList);
-const commandMap = {};
+const commandList: action[] = queryList.concat(actionsList);
+const commandMap: {[key: string]: action} = {};
 for (let command of commandList) {
     commandMap[command.name] = command;
 }
 
-export function getCommand(name) {
+export function getCommand(name: string) {
     return commandMap[name];
 }
 
 const commandRegex = /!(\w+)(?:\(((?:[^)(]+|'[^']*'|"[^"]*")*)\))?/
 const argRegex = /(?:"[^"]*"|'[^']*'|[^,])+/g;
 
-export function containsCommand(message) {
+export function containsCommand(message: string) {
     const commandMatch = message.match(commandRegex);
     if (commandMatch)
         return "!" + commandMatch[1];
     return null;
 }
 
-export function commandExists(commandName) {
+export function commandExists(commandName: string) {
     if (!commandName.startsWith("!"))
         commandName = "!" + commandName;
     return commandMap[commandName] !== undefined;
 }
 
 // todo: handle arrays?
-function parseCommandMessage(message) {
+function parseCommandMessage(message: string) {
     const commandMatch = message.match(commandRegex);
     if (commandMatch) {
         const commandName = "!"+commandMatch[1];
@@ -42,7 +43,7 @@ function parseCommandMessage(message) {
             }
 
             for (let i = 0; i < args.length; i++) {
-                let arg = args[i];
+                let arg: string | number = args[i];
                 if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
                     args[i] = arg.substring(1, arg.length-1);
                 } else if (!isNaN(arg)) {
@@ -68,13 +69,13 @@ export function truncCommandMessage(message: string) {
     return message;
 }
 
-function numParams(command) {
+function numParams(command: action) {
     if (!command.params)
         return 0;
     return Object.keys(command.params).length;
 }
 
-export async function executeCommand(agent, message) {
+export async function executeCommand(agent: Agent, message: string) {
     let parsed = parseCommandMessage(message);
     if (parsed) {
         const command = getCommand(parsed.commandName);
@@ -86,7 +87,7 @@ export async function executeCommand(agent, message) {
         if (numArgs !== numParams(command))
             return `Command ${command.name} was given ${numArgs} args, but requires ${numParams(command)} args.`;
         else
-            return await command.perform(agent, ...parsed.args);
+            return await command.perform(agent, ...parsed.args as RegExpMatchArray);
     }
     else
         return `Command is incorrectly formatted`;

@@ -2,6 +2,8 @@ import * as mc from "../../utils/mcdata.js";
 import * as world from "./world.js";
 import pf from 'mineflayer-pathfinder';
 import Vec3 from 'vec3';
+import {Bot} from "mineflayer";
+import {AgentBot} from "../agent-bot";
 
 
 export function log(bot, message, chat=false) {
@@ -614,7 +616,7 @@ export async function discard(bot, itemName, num=-1) {
     return true;
 }
 
-export async function eat(bot, foodName="") {
+export async function eat(bot: AgentBot, foodName="") {
     /**
      * Eat the given item. If no item is given, it will eat the first food item in the bot's inventory.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -625,25 +627,25 @@ export async function eat(bot, foodName="") {
      **/
     let item, name;
     if (foodName) {
-        item = bot.inventory.items().find(item => item.name === foodName);
+        item = bot.bot.inventory.items().find(item => item.name === foodName);
         name = foodName;
     }
     else {
-        item = bot.inventory.items().find(item => item.foodRecovery > 0);
+        item = bot.bot.inventory.items().find(item => item.foodRecovery > 0);
         name = "food";
     }
     if (!item) {
         log(bot, `You do not have any ${name} to eat.`);
         return false;
     }
-    await bot.equip(item, 'hand');
-    await bot.consume();
+    await bot.bot.equip(item, 'hand');
+    await bot.bot.consume();
     log(bot, `Successfully ate ${item.name}.`);
     return true;
 }
 
 
-export async function giveToPlayer(bot, itemType, username, num=1) {
+export async function giveToPlayer(bot: AgentBot, itemType, username: string, num=1) {
     /**
      * Give one of the specified item to the specified player
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -654,19 +656,19 @@ export async function giveToPlayer(bot, itemType, username, num=1) {
      * @example
      * await skills.giveToPlayer(bot, "oak_log", "player1");
      **/
-    let player = bot.players[username].entity
+    let player = bot.bot.players[username].entity
     if (!player){
         log(bot, `Could not find ${username}.`);
         return false;
     }
     await goToPlayer(bot, username);
-    await bot.lookAt(player.position);
+    await bot.bot.lookAt(player.position);
     discard(bot, itemType, num);
     return true;
 }
 
 
-export async function goToPosition(bot, x, y, z, min_distance=2) {
+export async function goToPosition(bot: AgentBot, x, y, z, min_distance=2) {
     /**
      * Navigate to the given position.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -683,14 +685,14 @@ export async function goToPosition(bot, x, y, z, min_distance=2) {
         log(bot, `Missing coordinates, given x:${x} y:${y} z:${z}`);
         return false;
     }
-    bot.pathfinder.setMovements(new pf.Movements(bot));
-    await bot.pathfinder.goto(new pf.goals.GoalNear(x, y, z, min_distance));
+    bot.bot.pathfinder.setMovements(new pf.Movements(bot.bot));
+    await bot.bot.pathfinder.goto(new pf.goals.GoalNear(x, y, z, min_distance));
     log(bot, `You have reached at ${x}, ${y}, ${z}.`);
     return true;
 }
 
 
-export async function goToPlayer(bot, username, distance=3) {
+export async function goToPlayer(bot: AgentBot, username: string, distance=3) {
     /**
      * Navigate to the given player.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -701,21 +703,21 @@ export async function goToPlayer(bot, username, distance=3) {
      * await skills.goToPlayer(bot, "player");
      **/
     bot.modes.pause('self_defense');
-    let player = bot.players[username].entity
+    let player = bot.bot.players[username].entity
     if (!player) {
         log(bot, `Could not find ${username}.`);
         return false;
     }
 
-    const move = new pf.Movements(bot);
-    bot.pathfinder.setMovements(move);
-    await bot.pathfinder.goto(new pf.goals.GoalFollow(player, distance), true);
+    const move = new pf.Movements(bot.bot);
+    bot.bot.pathfinder.setMovements(move);
+    await bot.bot.pathfinder.goto(new pf.goals.GoalFollow(player, distance));
 
     log(bot, `You have reached ${username}.`);
 }
 
 
-export async function followPlayer(bot, username, distance=4) {
+export async function followPlayer(bot: AgentBot, username: string, distance: number=4) {
     /**
      * Follow the given player endlessly. Will not return until the code is manually stopped.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -724,13 +726,13 @@ export async function followPlayer(bot, username, distance=4) {
      * @example
      * await skills.followPlayer(bot, "player");
      **/
-    let player = bot.players[username].entity
+    let player = bot.bot.players[username].entity
     if (!player)
         return false;
 
-    const move = new pf.Movements(bot);
-    bot.pathfinder.setMovements(move);
-    bot.pathfinder.setGoal(new pf.goals.GoalFollow(player, distance), true);
+    const move = new pf.Movements(bot.bot);
+    bot.bot.pathfinder.setMovements(move);
+    bot.bot.pathfinder.setGoal(new pf.goals.GoalFollow(player, distance), true);
     log(bot, `You are now actively following player ${username}.`);
 
     while (!bot.interrupt_code) {
@@ -740,7 +742,7 @@ export async function followPlayer(bot, username, distance=4) {
 }
 
 
-export async function moveAway(bot, distance) {
+export async function moveAway(bot: AgentBot, distance: number) {
     /**
      * Move away from current position in any direction.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -749,17 +751,17 @@ export async function moveAway(bot, distance) {
      * @example
      * await skills.moveAway(bot, 8);
      **/
-    const pos = bot.entity.position;
+    const pos = bot.bot.entity.position;
     let goal = new pf.goals.GoalNear(pos.x, pos.y, pos.z, distance);
     let inverted_goal = new pf.goals.GoalInvert(goal);
-    bot.pathfinder.setMovements(new pf.Movements(bot));
-    await bot.pathfinder.goto(inverted_goal);
-    let new_pos = bot.entity.position;
+    bot.bot.pathfinder.setMovements(new pf.Movements(bot.bot));
+    await bot.bot.pathfinder.goto(inverted_goal);
+    let new_pos = bot.bot.entity.position;
     log(bot, `Moved away from nearest entity to ${new_pos}.`);
     return true;
 }
 
-export async function stay(bot) {
+export async function stay(bot: AgentBot) {
     /**
      * Stay in the current position until interrupted. Disables all modes.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -778,7 +780,7 @@ export async function stay(bot) {
 }
 
 
-export async function goToBed(bot) {
+export async function goToBed(bot: AgentBot) {
     /**
      * Sleep in the nearest bed.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -786,7 +788,7 @@ export async function goToBed(bot) {
      * @example
      * await skills.goToBed(bot);
      **/
-    const beds = bot.findBlocks({
+    const beds = bot.bot.findBlocks({
         matching: (block) => {
             return block.name.includes('bed');
         },
@@ -799,17 +801,17 @@ export async function goToBed(bot) {
     }
     let loc = beds[0];
     await goToPosition(bot, loc.x, loc.y, loc.z);
-    const bed = bot.blockAt(loc);
-    await bot.sleep(bed);
+    const bed = bot.bot.blockAt(loc);
+    await bot.bot.sleep(bed);
     log(bot, `You are in bed.`);
-    while (bot.isSleeping) {
+    while (bot.bot.isSleeping) {
         await new Promise(resolve => setTimeout(resolve, 500));
     }
     log(bot, `You have woken up.`);
     return true;
 }
 
-export async function tillAndSow(bot, x, y, z, seedType=null) {
+export async function tillAndSow(bot: AgentBot, x: number, y: number, z: number, seedType: string | null=null) {
     /**
      * Till the ground at the given position and plant the given seed type.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -826,45 +828,45 @@ export async function tillAndSow(bot, x, y, z, seedType=null) {
     x = Math.round(x);
     y = Math.round(y);
     z = Math.round(z);
-    let block = bot.blockAt(new Vec3(x, y, z));
+    let block = bot.bot.blockAt(new Vec3(x, y, z));
     console.log(x, y, z)
     if (block.name !== 'grass_block' && block.name !== 'dirt' && block.name !== 'farmland') {
         log(bot, `Cannot till ${block.name}, must be grass_block or dirt.`);
         return false;
     }
-    let above = bot.blockAt(new Vec3(x, y+1, z));
+    let above = bot.bot.blockAt(new Vec3(x, y+1, z));
     if (above.name !== 'air') {
         log(bot, `Cannot till, there is ${above.name} above the block.`);
         return false;
     }
     // if distance is too far, move to the block
-    if (bot.entity.position.distanceTo(block.position) > 4.5) {
+    if (bot.bot.entity.position.distanceTo(block.position) > 4.5) {
         let pos = block.position;
-        bot.pathfinder.setMovements(new pf.Movements(bot));
-        await bot.pathfinder.goto(new pf.goals.GoalNear(pos.x, pos.y, pos.z, 4));
+        bot.bot.pathfinder.setMovements(new pf.Movements(bot));
+        await bot.bot.pathfinder.goto(new pf.goals.GoalNear(pos.x, pos.y, pos.z, 4));
     }
     if (block.name !== 'farmland') {
-        let hoe = bot.inventory.items().find(item => item.name.includes('hoe'));
+        let hoe = bot.bot.inventory.items().find(item => item.name.includes('hoe'));
         if (!hoe) {
             log(bot, `Cannot till, no hoes.`);
             return false;
         }
-        await bot.equip(hoe, 'hand');
-        await bot.activateBlock(block);
+        await bot.bot.equip(hoe, 'hand');
+        await bot.bot.activateBlock(block);
         log(bot, `Tilled block x:${x.toFixed(1)}, y:${y.toFixed(1)}, z:${z.toFixed(1)}.`);
     }
     
     if (seedType) {
         if (seedType.endsWith('seed') && !seedType.endsWith('seeds'))
             seedType += 's'; // fixes common mistake
-        let seeds = bot.inventory.items().find(item => item.name === seedType);
+        let seeds = bot.bot.inventory.items().find(item => item.name === seedType);
         if (!seeds) {
             log(bot, `No ${seedType} to plant.`);
             return false;
         }
-        await bot.equip(seeds, 'hand');
+        await bot.bot.equip(seeds, 'hand');
 
-        await bot.placeBlock(block, new Vec3(0, -1, 0));
+        await bot.bot.placeBlock(block, new Vec3(0, -1, 0));
         log(bot, `Planted ${seedType} at x:${x.toFixed(1)}, y:${y.toFixed(1)}, z:${z.toFixed(1)}.`);
     }
     return true;

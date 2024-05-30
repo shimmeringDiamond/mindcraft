@@ -167,7 +167,7 @@ export class Coder {
         return {success: false, message: null, interrupted: false, timedout: true};
     }
 
-    async executeResume(func=null, name=null, timeout=10): Promise<CodingResult> {
+    async executeResume(func: (() => Promise<void>) | null =null, name: string | null =null, timeout: number=10): Promise<CodingResult> {
         if (func != null) {
             this.resume_func = func;
             this.resume_name = name;

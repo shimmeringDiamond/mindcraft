@@ -24,4 +24,5 @@ const argv = yargs(args)
         description: 'automatically prompt the agent on startup'
     }).argv
 
+
 new Agent().start(argv.profile, argv.load_memory, argv.init_message);

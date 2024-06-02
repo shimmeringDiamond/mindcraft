@@ -80,6 +80,42 @@ export const queryList = [
         }
     },
     {
+        name: "!nearbyTeamMembers",
+        description: "Get a list of the specialization and names of nearby team members",
+        perform: function (agent) {
+            let bot = agent.bot;
+            let res = 'NEARBY_TEAM_MEMBERS';
+            let members = world.getNearbyPlayers(bot, 100)
+            for (let i = 0; i< members.length; i++) {
+                if (members[i].team == agent.bot.team) {
+                    res += `\n- ${agent.name} (${agent.specialization})`;
+                }
+            }
+            if (members.length == 0) {
+                res += ': none';
+            }
+            return pad(res);
+        }
+    },
+    {
+        name: "!nearbyEnemies",
+        description: "Get a list of the specialization and names of nearby enemies",
+        perform: function (agent) {
+            let bot = agent.bot;
+            let res = 'NEARBY_ENEMIES';
+            let members = world.getNearbyPlayers(bot, 100)
+            for (let i = 0; i< members.length; i++) {
+                if (members[i].team != agent.bot.team) {
+                    res += `\n- ${agent.name} (${agent.specialization})`;
+                }
+            }
+            if (members.length == 0) {
+                res += ': none';
+            }
+            return pad(res);
+        }
+    },
+    {
         name: "!craftable",
         description: "Get the craftable items with the bot's inventory.",
         perform: function (agent) {

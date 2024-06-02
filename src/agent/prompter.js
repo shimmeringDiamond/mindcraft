@@ -14,6 +14,7 @@ export class Prompter {
     constructor(agent, fp) {
         this.prompts = JSON.parse(readFileSync(fp, 'utf8'));
         let name = this.prompts.name;
+        let specialization = this.prompts.specialization;
         this.agent = agent;
         let model_name = this.prompts.model;
         mkdirSync(`./bots/${name}`, { recursive: true });
@@ -37,7 +38,12 @@ export class Prompter {
     getName() {
         return this.prompts.name;
     }
-
+    getSpecialization () {
+        return this.prompts.specialization;
+    }
+    getTeam() {
+        return this.prompts.team;
+    }
     async initExamples() {
         console.log('Loading examples...')
         this.convo_examples = new Examples(this.model);
@@ -48,8 +54,12 @@ export class Prompter {
     }
 
     async replaceStrings(prompt, messages, examples=null, prev_memory=null, to_summarize=[]) {
-        prompt = prompt.replaceAll('$NAME', this.agent.name);
+        prompt = prompt.replaceAll('$NAME', this.agent.name + ' the ' + this.agent.specialization);
 
+        if (prompt.includes('$CLOSETEAMMEMBERS')) {
+            let members = await getCommand('!nearbyTeamMembers').perform(this.agent);
+            prompt = prompt.replaceAll('$TEAMMEMBERS', members);
+        }
         if (prompt.includes('$STATS')) {
             let stats = await getCommand('!stats').perform(this.agent);
             prompt = prompt.replaceAll('$STATS', stats);

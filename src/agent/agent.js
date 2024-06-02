@@ -10,6 +10,8 @@ export class Agent {
     async start(profile_fp, load_mem=false, init_message=null) {
         this.prompter = new Prompter(this, profile_fp);
         this.name = this.prompter.getName();
+        this.team = this.prompter.getTeam();
+        this.specialization = this.prompter.getSpecialization();
         this.history = new History(this);
         this.coder = new Coder(this);
         await this.prompter.initExamples();
@@ -19,7 +21,8 @@ export class Agent {
 
         console.log('Logging in...');
         this.bot = initBot(this.name);
-
+        //this.bot.team = team;
+        init_message += "You are part of the red team, your sworn enemies are blue team, you must build up your civilization and conquer them.";
         initModes(this);
 
         this.bot.once('spawn', async () => {
@@ -60,6 +63,7 @@ export class Agent {
 
             this.startEvents();
         });
+        await this.mainActionLoop();
     }
 
     cleanChat(message) {
@@ -67,12 +71,22 @@ export class Agent {
         message = message.replaceAll('\n', '  ');
         return this.bot.chat(message);
     }
+    async mainActionLoop() {
+        while (true) {
+            await this.handleMessage('system', 'respond with what you wish to do now');
+        }
+    }
+
 
     async handleMessage(source, message) {
         if (!!source && !!message)
             await this.history.add(source, message);
+        //TODO goal for now: one bot operating autonomously towards a goal
+        //the agents communicate in plaintext and they decide what comands get run
+        //agent prompts in a loop, doing actions, and adding the feedback into the history
+        //add a function to handle communication from other bots which will send a prompt with history and give the bot an opportunity to stop the current action and act on the communication
 
-        const user_command_name = containsCommand(message);
+        /*const user_command_name = containsCommand(message);
         if (user_command_name) {
             if (!commandExists(user_command_name)) {
                 this.bot.chat(`Command '${user_command_name}' does not exist.`);
@@ -89,7 +103,7 @@ export class Agent {
             if (execute_res) 
                 this.cleanChat(execute_res);
             return;
-        }
+        }*/
 
         for (let i=0; i<5; i++) {
             let history = this.history.getHistory();
